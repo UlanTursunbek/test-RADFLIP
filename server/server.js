@@ -9,18 +9,14 @@ import React from 'react'
 import cookieParser from 'cookie-parser'
 import config from './config'
 import Html from '../client/html'
+import Item from '../server/model/Item.model'
+import mongooseService from './services/mongoose'
+
+const db = mongooseService.connect()
 
 const Root = () => ''
 
 try {
-  // eslint-disable-next-line import/no-unresolved
-  // ;(async () => {
-  //   const items = await import('../dist/assets/js/root.bundle')
-  //   console.log(JSON.stringify(items))
-
-  //   Root = (props) => <items.Root {...props} />
-  //   console.log(JSON.stringify(items.Root))
-  // })()
   console.log(Root)
 } catch (ex) {
   console.log(' run yarn build:prod to enable ssr')
@@ -40,6 +36,29 @@ const middleware = [
 ]
 
 middleware.forEach((it) => server.use(it))
+
+server.get('/api/v1/items', async (req, res) => {
+  const item = await Item.find({})
+  res.json(item)
+});
+
+server.post('/api/v1/items', async (req, res) => {
+  const { title, category, description, price } = req.body
+  const newItem = await Item.create({ title, category, description, price })
+  res.json(newItem)
+})
+
+server.delete('/api/v1/items/:id', async (req, res) => {
+  const { id } = req.params
+  const newItem = await Item.deleteOne({ _id: id })
+  res.json(newItem)
+})
+
+server.patch('/api/v1/items/:id', async (req, res) => {
+  const { id, title, category, description, price } = req.body
+  const newItem = await Item.updateOne({ _id: id }, { $set: { title, category, description, price } }, { upsert: false })
+  res.json(newItem)
+})
 
 server.use('/api/', (req, res) => {
   res.status(404)
@@ -80,7 +99,7 @@ if (config.isSocketsEnabled) {
   const echo = sockjs.createServer()
   echo.on('connection', (conn) => {
     connections.push(conn)
-    conn.on('data', async () => {})
+    conn.on('data', async () => { })
 
     conn.on('close', () => {
       connections = connections.filter((c) => c.readyState !== 3)
